@@ -377,23 +377,29 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
       });
 
       if (basemapType === 'ccts') {
-        // 古地图底图模式：不透明，替代暗色底图
+        // 古地图底图模式：半透明复古色块，现代底图轮廓透出形成对比
         map.addLayer({
           id: 'ccts-basemap-layer',
           type: 'raster',
           source: 'ccts-tiles',
           paint: {
-            'raster-opacity': 1,
+            'raster-opacity': 0.55,
+            'raster-saturation': -0.35,
+            'raster-contrast': 0.15,
+            'raster-hue-rotate': 15,
           },
         }, 'chinese-place-labels'); // 插入到地名标注之前
       } else {
-        // 叠加模式：半透明叠加在暗色底图之上
+        // 叠加模式：半透明复古色块叠加在暗色底图之上
         map.addLayer({
           id: 'ccts-overlay-layer',
           type: 'raster',
           source: 'ccts-tiles',
           paint: {
-            'raster-opacity': 0.7,
+            'raster-opacity': 0.5,
+            'raster-saturation': -0.3,
+            'raster-contrast': 0.1,
+            'raster-hue-rotate': 12,
           },
         }, 'territory-glow'); // 插入到疆域光晕层之前，使疆域显示在最上层
       }
