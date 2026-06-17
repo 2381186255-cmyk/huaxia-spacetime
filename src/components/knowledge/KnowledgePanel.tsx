@@ -58,7 +58,10 @@ export function KnowledgePanel({
   }, [panelTab, selectedDynastyId]);
 
   return (
-    <div className="w-80 bg-surface border-l border-border flex flex-col shrink-0">
+    <div
+      className="w-80 bg-surface/75 backdrop-blur-xl border-l border-border/50 flex flex-col shrink-0"
+      style={{ boxShadow: "-8px 0 32px rgba(0, 0, 0, 0.45), 1px 0 0 rgba(255, 255, 255, 0.04) inset" }}
+    >
       {/* 面板头部 */}
       <div className="h-10 flex items-center justify-between px-3 border-b border-border">
         <div className="flex items-center gap-1">

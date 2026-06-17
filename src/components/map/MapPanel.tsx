@@ -513,7 +513,7 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
                 ],
               }}
             />
-            {/* 地块填充 - 带渐变效果 */}
+            {/* 地块填充 - 明显提高可见度 */}
             <Layer
               id="territory-fill"
               type="fill"
@@ -522,28 +522,28 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
                 "fill-color": ["get", "color"],
                 "fill-opacity": [
                   "interpolate", ["linear"], ["zoom"],
-                  3, ["case", ["boolean", ["feature-state", "hover"], false], 0.45, 0.28],
-                  6, ["case", ["boolean", ["feature-state", "hover"], false], 0.40, 0.22],
-                  10, ["case", ["boolean", ["feature-state", "hover"], false], 0.35, 0.18],
+                  3, ["case", ["boolean", ["feature-state", "hover"], false], 0.65, 0.42],
+                  6, ["case", ["boolean", ["feature-state", "hover"], false], 0.58, 0.36],
+                  10, ["case", ["boolean", ["feature-state", "hover"], false], 0.50, 0.30],
                 ],
               }}
             />
-            {/* 地块内层 - 增加层次感 */}
+            {/* 地块内层 - 增强层次感 */}
             <Layer
               id="territory-fill-inner"
               type="fill"
               filter={territoryFilter}
               paint={{
-                "fill-color": ["get", "color"],
+                "fill-color": "#000000",
                 "fill-opacity": [
                   "case",
                   ["boolean", ["feature-state", "hover"], false],
-                  0.15,
                   0.08,
+                  0.04,
                 ],
               }}
             />
-            {/* 地块主边界 - 粗实线 */}
+            {/* 地块主边界 - 更粗的实线 */}
             <Layer
               id="territory-border"
               type="line"
@@ -552,15 +552,15 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
                 "line-color": ["get", "color"],
                 "line-width": [
                   "interpolate", ["linear"], ["zoom"],
-                  3, 1.5,
-                  6, 2.5,
-                  10, 3,
+                  3, 2.5,
+                  6, 4,
+                  10, 5,
                 ],
-                "line-opacity": 0.9,
-                "line-blur": 0.5,
+                "line-opacity": 1,
+                "line-blur": 0,
               }}
             />
-            {/* 地块高光边界 - 细亮线 */}
+            {/* 地块高光边界 - 更亮的轮廓 */}
             <Layer
               id="territory-border-highlight"
               type="line"
@@ -570,14 +570,14 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
                 "line-width": [
                   "case",
                   ["boolean", ["feature-state", "hover"], false],
-                  1.2,
-                  0.6,
+                  2,
+                  1,
                 ],
                 "line-opacity": [
                   "case",
                   ["boolean", ["feature-state", "hover"], false],
-                  0.6,
-                  0.25,
+                  0.85,
+                  0.45,
                 ],
               }}
             />
@@ -820,7 +820,7 @@ function LayerControl() {
   ];
 
   return (
-    <div className="bg-surface/95 backdrop-blur-md rounded-xl p-2.5 border border-border/70 shadow-lg shadow-black/30 text-[10px]">
+    <div className="bg-surface/80 backdrop-blur-xl rounded-xl p-2.5 border border-border/50 shadow-lg shadow-black/40 text-[10px]">
       <p className="text-text-tertiary mb-2 font-medium tracking-wide">图层</p>
       {layers.map((layer) => {
         const isActive = activeLayers.includes(layer.id);
@@ -854,7 +854,7 @@ function MapLegend({ events }: { events: HistoricalEvent[] }) {
   if (dynastySet.size === 0) return null;
 
   return (
-    <div className="bg-surface/95 backdrop-blur-md rounded-xl p-2.5 border border-border/70 shadow-lg shadow-black/30 text-[10px]">
+    <div className="bg-surface/80 backdrop-blur-xl rounded-xl p-2.5 border border-border/50 shadow-lg shadow-black/40 text-[10px]">
       <p className="text-text-tertiary mb-1.5 font-medium tracking-wide">朝代图例</p>
       <div className="flex flex-wrap gap-x-3 gap-y-1 max-w-[220px]">
         {Array.from(dynastySet.entries()).map(([name, color]) => (
@@ -873,7 +873,7 @@ function BasemapSwitcher() {
   const { basemapType, setBasemapType } = useAppStore();
 
   return (
-    <div className="flex gap-1 bg-surface/95 backdrop-blur-md rounded-xl p-1 border border-border/70 shadow-lg shadow-black/30">
+    <div className="flex gap-1 bg-surface/80 backdrop-blur-xl rounded-xl p-1 border border-border/50 shadow-lg shadow-black/40">
       {(["modern", "ccts", "ancient_overlay"] as const).map((type) => (
         <button
           key={type}
