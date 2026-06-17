@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isMockMode, getEventById } from '@/services/mock-data';
+import { sanitizeId, sanitizeYear, sanitizeErrorMessage } from '@/lib/security';
 
 export async function GET(
   request: NextRequest,
@@ -9,9 +10,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const eventId = parseInt(id);
+    const eventId = sanitizeId(id);
 
-    if (isNaN(eventId)) {
+    if (eventId === null) {
       return NextResponse.json({ error: 'Invalid event ID' }, { status: 400 });
     }
 
@@ -35,7 +36,10 @@ export async function GET(
     const { CACHE_TTL } = await import('@/lib/constants');
 
     const { searchParams } = request.nextUrl;
-    const year = searchParams.get('year') ? parseFloat(searchParams.get('year')!) : undefined;
+    const year = searchParams.get('year') ? sanitizeYear(searchParams.get('year')!) : undefined;
+    if (searchParams.get('year') && year === null) {
+      return NextResponse.json({ error: 'Invalid year parameter' }, { status: 400 });
+    }
     const faction = searchParams.get('faction');
 
     const cacheKey = `events:territories:${eventId}:${year || 'all'}:${faction || 'all'}`;
@@ -104,7 +108,7 @@ export async function GET(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error in /api/events/[id]/territories:', error);
+    console.error('Error in /api/events/[id]/territories:', sanitizeErrorMessage(error));
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

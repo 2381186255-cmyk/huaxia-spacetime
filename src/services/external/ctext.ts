@@ -2,6 +2,7 @@
 
 import { cacheOrFetch } from '@/services/redis';
 import { CACHE_TTL } from '@/lib/constants';
+import { isAllowedExternalUrl } from '@/lib/security';
 import type { CTextDocument, CTextSearchResult } from '@/lib/types';
 
 const BASE_URL = 'https://ctext.org/tools/api';
@@ -88,7 +89,14 @@ export class CTextService {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const qs = new URLSearchParams(filteredParams).toString();
-        const res = await fetch(`${url}?${qs}`, {
+        const fullUrl = `${url}?${qs}`;
+
+        // SSRF防护：验证URL在白名单内
+        if (!isAllowedExternalUrl(fullUrl)) {
+          throw new Error('CText API: URL not in allowed domains');
+        }
+
+        const res = await fetch(fullUrl, {
           headers: { 'Accept': 'application/json' },
           signal: AbortSignal.timeout(15000),
         });

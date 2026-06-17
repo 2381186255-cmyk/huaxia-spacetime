@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isMockMode, getPersonById } from '@/services/mock-data';
+import { sanitizeId, sanitizeErrorMessage } from '@/lib/security';
 
 export async function GET(
   request: NextRequest,
@@ -9,9 +10,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const personId = parseInt(id);
+    const personId = sanitizeId(id);
 
-    if (isNaN(personId)) {
+    if (personId === null) {
       return NextResponse.json({ error: 'Invalid person ID' }, { status: 400 });
     }
 
@@ -73,7 +74,7 @@ export async function GET(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error in /api/persons/[id]:', error);
+    console.error('Error in /api/persons/[id]:', sanitizeErrorMessage(error));
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

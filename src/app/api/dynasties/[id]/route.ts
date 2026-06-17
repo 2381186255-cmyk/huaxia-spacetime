@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isMockMode, getDynastyById, getEventsByYearRange, MOCK_DYNASTIES } from '@/services/mock-data';
+import { sanitizeId, sanitizeYear, sanitizeErrorMessage } from '@/lib/security';
 
 export async function GET(
   request: NextRequest,
@@ -9,10 +10,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const dynastyId = parseInt(id);
+    const dynastyId = sanitizeId(id);
     const pathname = request.nextUrl.pathname;
 
-    if (isNaN(dynastyId)) {
+    if (dynastyId === null) {
       return NextResponse.json({ error: 'Invalid dynasty ID' }, { status: 400 });
     }
 
@@ -82,7 +83,7 @@ export async function GET(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error in /api/dynasties/[id]:', error);
+    console.error('Error in /api/dynasties/[id]:', sanitizeErrorMessage(error));
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

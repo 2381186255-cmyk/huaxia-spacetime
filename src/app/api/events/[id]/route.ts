@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isMockMode, getEventById } from '@/services/mock-data';
+import { sanitizeId, sanitizeErrorMessage } from '@/lib/security';
 
 export async function GET(
   request: NextRequest,
@@ -9,9 +10,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const eventId = parseInt(id);
+    const eventId = sanitizeId(id);
 
-    if (isNaN(eventId)) {
+    if (eventId === null) {
       return NextResponse.json({ error: 'Invalid event ID' }, { status: 400 });
     }
 
@@ -152,7 +153,7 @@ export async function GET(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error in /api/events/[id]:', error);
+    console.error('Error in /api/events/[id]:', sanitizeErrorMessage(error));
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

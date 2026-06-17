@@ -2,16 +2,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isMockMode, getEventsByYearRange, MOCK_EVENTS } from '@/services/mock-data';
+import { sanitizeYear, sanitizeSearchQuery, sanitizeErrorMessage } from '@/lib/security';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
-    const startYear = searchParams.get('start_year') ? parseFloat(searchParams.get('start_year')!) : undefined;
-    const endYear = searchParams.get('end_year') ? parseFloat(searchParams.get('end_year')!) : undefined;
+    const startYear = searchParams.get('start_year') ? sanitizeYear(searchParams.get('start_year')!) ?? undefined : undefined;
+    const endYear = searchParams.get('end_year') ? sanitizeYear(searchParams.get('end_year')!) ?? undefined : undefined;
     const dynastyId = searchParams.get('dynasty_id') ? parseInt(searchParams.get('dynasty_id')!) : undefined;
     const eventType = searchParams.get('event_type');
     const importance = searchParams.get('importance') ? parseInt(searchParams.get('importance')!) : undefined;
-    const q = searchParams.get('q');
+    const q = searchParams.get('q') ? sanitizeSearchQuery(searchParams.get('q')!) : undefined;
 
     // Mock模式
     if (isMockMode()) {
@@ -156,7 +157,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error in /api/events:', error);
+    console.error('Error in /api/events:', sanitizeErrorMessage(error));
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isMockMode } from '@/services/mock-data';
+import { sanitizeErrorMessage } from '@/lib/security';
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Unknown spatial operation' }, { status: 400 });
   } catch (error) {
-    console.error('Error in /api/spatial:', error);
+    console.error('Error in /api/spatial:', sanitizeErrorMessage(error));
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

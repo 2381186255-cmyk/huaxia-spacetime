@@ -2,6 +2,7 @@
 
 import { cacheOrFetch } from '@/services/redis';
 import { CACHE_TTL } from '@/lib/constants';
+import { isAllowedExternalUrl } from '@/lib/security';
 import type { CHGISPlace } from '@/lib/types';
 
 const BASE_URL = process.env.CHGIS_API_URL || 'https://chgis.fas.harvard.edu/api';
@@ -76,7 +77,14 @@ export class CHGISService {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const qs = new URLSearchParams(filteredParams).toString();
-        const res = await fetch(`${url}?${qs}`, {
+        const fullUrl = `${url}?${qs}`;
+
+        // SSRF防护：验证URL在白名单内
+        if (!isAllowedExternalUrl(fullUrl)) {
+          throw new Error('CHGIS API: URL not in allowed domains');
+        }
+
+        const res = await fetch(fullUrl, {
           headers: {
             ...(API_KEY ? { 'Authorization': `Bearer ${API_KEY}` } : {}),
             'Accept': 'application/json',

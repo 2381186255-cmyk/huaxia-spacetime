@@ -2,14 +2,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isMockMode, getTodayEvents, MOCK_EVENTS } from '@/services/mock-data';
+import { sanitizeMonth, sanitizeDay, sanitizeErrorMessage } from '@/lib/security';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
-    const month = parseInt(searchParams.get('month') || '0');
-    const day = parseInt(searchParams.get('day') || '0');
+    const month = sanitizeMonth(searchParams.get('month') || '0');
+    const day = sanitizeDay(searchParams.get('day') || '0');
 
-    if (!month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+    if (!month || !day) {
       return NextResponse.json(
         { error: 'Invalid month or day parameter' },
         { status: 400 }
@@ -164,7 +165,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error in /api/events/today:', error);
+    console.error('Error in /api/events/today:', sanitizeErrorMessage(error));
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

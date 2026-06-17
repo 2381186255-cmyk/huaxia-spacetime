@@ -2,6 +2,7 @@
 
 import { cacheOrFetch } from '@/services/redis';
 import { CACHE_TTL } from '@/lib/constants';
+import { isAllowedExternalUrl } from '@/lib/security';
 import type { CBDBPerson } from '@/lib/types';
 
 const BASE_URL = process.env.CBDB_API_URL || 'https://cbdb.fas.harvard.edu/api';
@@ -166,6 +167,11 @@ export class CBDBService {
           headers: { 'Accept': 'application/json' },
           signal: AbortSignal.timeout(10000),
         });
+
+        // SSRF防护：验证URL在白名单内
+        if (!isAllowedExternalUrl(fetchUrl)) {
+          throw new Error('CBDB API: URL not in allowed domains');
+        }
 
         if (!res.ok) throw new Error(`CBDB API error: ${res.status}`);
         return await res.json();
