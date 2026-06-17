@@ -1,0 +1,46 @@
+{
+  "name": "huaxia-spacetime",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "华夏时空 - 中国历史知识交互软件，集知识库、地图交互、时间轴于一体",
+  "scripts": {
+    "dev": "next dev",
+    "dev:lowmem": "node --max-old-space-size=1024 node_modules/next/dist/bin/next dev",
+    "build": "next build",
+    "build:lowmem": "node --max-old-space-size=1536 node_modules/next/dist/bin/next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@turf/area": "^7.3.5",
+    "@turf/buffer": "^7.3.5",
+    "@turf/distance": "^7.3.5",
+    "@turf/turf": "^7.3.5",
+    "d3": "^7.9.0",
+    "framer-motion": "^12.40.0",
+    "ioredis": "^5.11.0",
+    "lucide-react": "^1.16.0",
+    "maplibre-gl": "^5.24.0",
+    "next": "16.2.6",
+    "pg": "^8.21.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-map-gl": "^8.1.1",
+    "swr": "^2.4.1",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/d3": "^7.4.3",
+    "@types/node": "^20",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+:root {
+  --background: #08080e;        /* 墨黑 - deep ink black */
+  --foreground: #e8e0d0;        /* 宣纸 - rice paper */
+  --surface: #0e0e18;           /* 深墨 - deep ink */
+  --surface-elevated: #1a1a2e;  /* 浓墨 - thick ink */
+  --border: #2a2a42;            /* 淡墨 - light ink */
+  --accent: #c23a2b;            /* 朱砂 - vermillion */
+  --accent-muted: #8b2020;      /* 暗朱 - dark vermillion */
+  --gold: #c9a84c;              /* 烫金 - gold leaf */
+  --gold-dim: #8b7434;          /* 暗金 - dim gold */
+  --text-primary: #e8e0d0;      /* 宣纸 */
+  --text-secondary: #a89e8e;    /* 旧纸 - aged paper */
+  --text-tertiary: #6b6358;     /* 淡纸 - faded paper */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-muted: var(--accent-muted);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-gold: var(--gold);
+  --color-gold-dim: var(--gold-dim);
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), "PingFang SC", "Microsoft YaHei", "Noto Serif SC", serif;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.02;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #525252;
+}
+
+/* MapLibre popup styling */
+.maplibregl-popup-content {
+  background: rgba(14, 14, 24, 0.95);
+  color: #e8e0d0;
+  border-radius: 4px;
+  padding: 12px;
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.maplibregl-popup-tip {
+  border-top-color: rgba(14, 14, 24, 0.95);
+}
+
+.maplibregl-popup-close-button {
+  color: #a89e8e;
+  font-size: 16px;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: #c23a2b;
+}
+
+/* Mode transition */
+.mode-transition-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.mode-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.mode-transition-exit {
+  opacity: 1;
+}
+.mode-transition-exit-active {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
