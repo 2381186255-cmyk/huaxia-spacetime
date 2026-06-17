@@ -240,7 +240,7 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
       if (allCoords.length > 0) {
         const avgLng = allCoords.reduce((s, c) => s + c[0], 0) / allCoords.length;
         const avgLat = allCoords.reduce((s, c) => s + c[1], 0) / allCoords.length;
-        mapRef.current?.flyTo({ center: [avgLng, avgLat], zoom: 5, duration: 1200 });
+        mapRef.current?.flyTo({ center: [avgLng, avgLat], zoom: 5, duration: 1500, curve: 1.4, easing: (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2 });
       }
       setTerritoryPopup({
         longitude: e.lngLat.lng,
@@ -299,7 +299,7 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
             placeType: props.placeType,
             eventId: props.eventId,
           });
-          mapRef.current?.flyTo({ center: [coords[0], coords[1]], zoom: 7, duration: 1000 });
+          mapRef.current?.flyTo({ center: [coords[0], coords[1]], zoom: 7, duration: 1200, curve: 1.4, easing: (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2 });
           onMarkerClick?.(props.eventId);
           return;
         }
@@ -462,9 +462,9 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
               "text-field": ["get", "name"],
               "text-size": [
               "interpolate", ["linear"], ["zoom"],
-              3, 9,
-              6, 11,
-              10, 13,
+              3, 10,
+              6, 12,
+              10, 14,
             ],
               "text-anchor": "top",
               "text-offset": [0, 0.8],
@@ -472,15 +472,16 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
               "text-allow-overlap": false,
               "text-ignore-placement": false,
               "visibility": "visible",
+              "text-letter-spacing": 0.08,
             }}
             paint={{
-              "text-color": "#d4d4d4",
-              "text-halo-color": "#1a1a1a",
-              "text-halo-width": 2,
+              "text-color": "#e0d8c8",
+              "text-halo-color": "#0a0a14",
+              "text-halo-width": 2.5,
               "text-opacity": [
                 "interpolate", ["linear"], ["zoom"],
                 2, 0,
-                4, 0.8,
+                4, 0.85,
                 6, 1,
               ],
             }}
@@ -491,17 +492,22 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
         {/* ===== 疆域地块图层 ===== */}
         {showTerritories && (
           <Source id="territories" type="geojson" data={territoryGeoJSON}>
-            {/* 地块光晕层 - 微弱外发光效果 */}
+            {/* 地块外光晕层 - 大范围柔和发光 */}
             <Layer
               id="territory-glow"
               type="fill"
               filter={territoryFilter}
               paint={{
                 "fill-color": ["get", "color"],
-                "fill-opacity": 0.06,
+                "fill-opacity": [
+                  "interpolate", ["linear"], ["zoom"],
+                  3, 0.04,
+                  6, 0.08,
+                  10, 0.12,
+                ],
               }}
             />
-            {/* 地块填充 */}
+            {/* 地块填充 - 带渐变效果 */}
             <Layer
               id="territory-fill"
               type="fill"
@@ -509,14 +515,29 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
               paint={{
                 "fill-color": ["get", "color"],
                 "fill-opacity": [
-                  "case",
-                  ["boolean", ["feature-state", "hover"], false],
-                  0.35,
-                  0.25,
+                  "interpolate", ["linear"], ["zoom"],
+                  3, ["case", ["boolean", ["feature-state", "hover"], false], 0.45, 0.28],
+                  6, ["case", ["boolean", ["feature-state", "hover"], false], 0.40, 0.22],
+                  10, ["case", ["boolean", ["feature-state", "hover"], false], 0.35, 0.18],
                 ],
               }}
             />
-            {/* 地块边界 */}
+            {/* 地块内层 - 增加层次感 */}
+            <Layer
+              id="territory-fill-inner"
+              type="fill"
+              filter={territoryFilter}
+              paint={{
+                "fill-color": ["get", "color"],
+                "fill-opacity": [
+                  "case",
+                  ["boolean", ["feature-state", "hover"], false],
+                  0.15,
+                  0.08,
+                ],
+              }}
+            />
+            {/* 地块主边界 - 粗实线 */}
             <Layer
               id="territory-border"
               type="line"
@@ -524,12 +545,34 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
               paint={{
                 "line-color": ["get", "color"],
                 "line-width": [
+                  "interpolate", ["linear"], ["zoom"],
+                  3, 1.5,
+                  6, 2.5,
+                  10, 3,
+                ],
+                "line-opacity": 0.9,
+                "line-blur": 0.5,
+              }}
+            />
+            {/* 地块高光边界 - 细亮线 */}
+            <Layer
+              id="territory-border-highlight"
+              type="line"
+              filter={territoryFilter}
+              paint={{
+                "line-color": "#ffffff",
+                "line-width": [
                   "case",
                   ["boolean", ["feature-state", "hover"], false],
-                  3,
-                  2.5,
+                  1.2,
+                  0.6,
                 ],
-                "line-opacity": 0.8,
+                "line-opacity": [
+                  "case",
+                  ["boolean", ["feature-state", "hover"], false],
+                  0.6,
+                  0.25,
+                ],
               }}
             />
             {/* 地块名称标注 */}
@@ -539,15 +582,21 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
               filter={territoryFilter}
               layout={{
                 "text-field": ["get", "dynastyName"],
-                "text-size": 12,
+                "text-size": [
+                  "interpolate", ["linear"], ["zoom"],
+                  3, 11,
+                  6, 13,
+                  10, 15,
+                ],
                 "text-anchor": "center",
                 "text-optional": true,
+                "text-letter-spacing": 0.1,
               }}
               paint={{
                 "text-color": "#ffffff",
                 "text-halo-color": ["get", "color"],
-                "text-halo-width": 2,
-                "text-opacity": 0.9,
+                "text-halo-width": 2.5,
+                "text-opacity": 0.95,
               }}
             />
           </Source>
@@ -556,14 +605,31 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
         {/* ===== 事件连线图层 ===== */}
         {routesGeoJSON.features.length > 0 && (
           <Source id="routes" type="geojson" data={routesGeoJSON}>
+            {/* 连线外光晕 */}
+            <Layer
+              id="route-lines-glow"
+              type="line"
+              paint={{
+                "line-color": ["get", "dynastyColor"],
+                "line-width": 6,
+                "line-opacity": ["*", ["get", "timeOpacity"], 0.15],
+                "line-blur": 4,
+              }}
+            />
+            {/* 连线主体 - 流动虚线 */}
             <Layer
               id="route-lines"
               type="line"
               paint={{
                 "line-color": ["get", "dynastyColor"],
-                "line-width": 2,
-                "line-opacity": ["*", ["get", "timeOpacity"], 0.5],
-                "line-dasharray": [3, 3],
+                "line-width": [
+                  "interpolate", ["linear"], ["zoom"],
+                  3, 1.5,
+                  6, 2,
+                  10, 2.5,
+                ],
+                "line-opacity": ["*", ["get", "timeOpacity"], 0.7],
+                "line-dasharray": [2, 2],
               }}
             />
           </Source>
@@ -572,16 +638,31 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
         {/* ===== 地点标记图层 ===== */}
         {placesGeoJSON.features.length > 0 && (
           <Source id="places" type="geojson" data={placesGeoJSON}>
+            {/* 外层大光晕 - 营造氛围 */}
+            <Layer
+              id="place-aura"
+              type="circle"
+              paint={{
+                "circle-radius": ["interpolate", ["linear"], ["get", "importance"],
+                  1, 24, 2, 20, 3, 16, 4, 14, 5, 12],
+                "circle-color": ["get", "dynastyColor"],
+                "circle-opacity": ["*", ["get", "timeOpacity"], 0.08],
+                "circle-blur": 1,
+              }}
+            />
+            {/* 中层光晕 */}
             <Layer
               id="place-glow"
               type="circle"
               paint={{
                 "circle-radius": ["interpolate", ["linear"], ["get", "importance"],
-                  1, 14, 2, 12, 3, 10, 4, 8, 5, 6],
+                  1, 16, 2, 13, 3, 11, 4, 9, 5, 7],
                 "circle-color": ["get", "dynastyColor"],
-                "circle-opacity": ["*", ["get", "timeOpacity"], 0.15],
+                "circle-opacity": ["*", ["get", "timeOpacity"], 0.2],
+                "circle-blur": 0.8,
               }}
             />
+            {/* 标记主体 - 带描边 */}
             <Layer
               id="place-markers"
               type="circle"
@@ -595,20 +676,37 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
                 "circle-stroke-opacity": ["get", "timeOpacity"],
               }}
             />
+            {/* 标记中心高光点 */}
+            <Layer
+              id="place-markers-core"
+              type="circle"
+              paint={{
+                "circle-radius": ["interpolate", ["linear"], ["get", "importance"],
+                  1, 3, 2, 2.5, 3, 2, 4, 1.5, 5, 1],
+                "circle-color": "#ffffff",
+                "circle-opacity": ["*", ["get", "timeOpacity"], 0.9],
+              }}
+            />
             <Layer
               id="place-labels"
               type="symbol"
               layout={{
                 "text-field": ["get", "placeName"],
-                "text-size": 10,
+                "text-size": [
+                  "interpolate", ["linear"], ["zoom"],
+                  3, 9,
+                  6, 11,
+                  10, 12,
+                ],
                 "text-offset": [0, 1.5],
                 "text-anchor": "top",
                 "text-optional": true,
+                "text-letter-spacing": 0.05,
               }}
               paint={{
-                "text-color": "#e5e5e5",
-                "text-halo-color": "#1a1a1a",
-                "text-halo-width": 1.5,
+                "text-color": "#f5f5f5",
+                "text-halo-color": "#000000",
+                "text-halo-width": 2,
                 "text-opacity": ["get", "timeOpacity"],
               }}
             />
@@ -624,34 +722,38 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
             onClose={() => setPopupInfo(null)}
             closeButton={true}
             closeOnClick={false}
-            maxWidth="240px"
+            maxWidth="260px"
+            className="map-popup-enhanced"
           >
-            <div className="text-xs min-w-[160px]">
-              <div className="flex items-center gap-1.5 mb-1.5">
+            <div className="text-xs min-w-[180px] p-1">
+              <div className="flex items-center gap-2 mb-2">
                 {popupInfo.dynastyColor && (
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: popupInfo.dynastyColor }} />
+                  <div
+                    className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white/20"
+                    style={{ backgroundColor: popupInfo.dynastyColor, boxShadow: `0 0 8px ${popupInfo.dynastyColor}80` }}
+                  />
                 )}
-                <span className="font-medium text-text-primary text-[13px]">{popupInfo.placeName}</span>
+                <span className="font-semibold text-text-primary text-[14px] tracking-wide">{popupInfo.placeName}</span>
               </div>
               {popupInfo.modernName && popupInfo.modernName !== popupInfo.placeName && (
-                <p className="text-[10px] text-text-tertiary mb-1">今{popupInfo.modernName}</p>
+                <p className="text-[10px] text-text-tertiary mb-1.5 italic">今 {popupInfo.modernName}</p>
               )}
               {popupInfo.placeType && (
-                <span className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-accent/15 text-accent mb-1.5">
+                <span className="inline-block text-[9px] px-2 py-0.5 rounded-full bg-accent/15 text-accent mb-2 border border-accent/20">
                   {PLACE_TYPE_LABELS[popupInfo.placeType] || popupInfo.placeType}
                 </span>
               )}
-              <div className="pt-1.5 border-t border-border/50">
-                <p className="text-[11px] text-text-primary font-medium">{popupInfo.eventName}</p>
-                <p className="text-[10px] text-text-tertiary">
+              <div className="pt-2 border-t border-border/60">
+                <p className="text-[11px] text-text-primary font-medium leading-relaxed">{popupInfo.eventName}</p>
+                <p className="text-[10px] text-text-tertiary mt-0.5">
                   {formatYear(popupInfo.year)}{popupInfo.dynasty ? ` · ${popupInfo.dynasty}` : ""}
                 </p>
               </div>
               <button
-                className="mt-2 w-full text-center text-[10px] py-1 rounded bg-accent/15 text-accent hover:bg-accent/25 transition-colors"
+                className="mt-2.5 w-full text-center text-[10px] py-1.5 rounded-md bg-accent/15 text-accent hover:bg-accent/25 transition-all duration-200 border border-accent/20 hover:border-accent/40"
                 onClick={() => onMarkerClick?.(popupInfo.eventId)}
               >
-                查看事件详情
+                查看事件详情 →
               </button>
             </div>
           </Popup>
@@ -666,18 +768,22 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
             onClose={() => setTerritoryPopup(null)}
             closeButton={true}
             closeOnClick={false}
-            maxWidth="200px"
+            maxWidth="220px"
+            className="map-popup-enhanced"
           >
-            <div className="text-xs min-w-[140px]">
-              <div className="flex items-center gap-1.5 mb-1">
-                <div className="w-3 h-3 rounded shrink-0" style={{ backgroundColor: territoryPopup.color }} />
-                <span className="font-medium text-text-primary text-[13px]">{territoryPopup.dynastyName}</span>
+            <div className="text-xs min-w-[160px] p-1">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div
+                  className="w-3.5 h-3.5 rounded shrink-0 ring-2 ring-white/20"
+                  style={{ backgroundColor: territoryPopup.color, boxShadow: `0 0 8px ${territoryPopup.color}80` }}
+                />
+                <span className="font-semibold text-text-primary text-[14px] tracking-wide">{territoryPopup.dynastyName}</span>
               </div>
-              <p className="text-[10px] text-text-tertiary">
+              <p className="text-[10px] text-text-secondary">
                 {formatYear(territoryPopup.startYear)} — {formatYear(territoryPopup.endYear)}
               </p>
-              <p className="text-[9px] text-text-tertiary mt-1">
-                共 {territoryPopup.endYear - territoryPopup.startYear} 年
+              <p className="text-[9px] text-text-tertiary mt-1.5 pt-1.5 border-t border-border/40">
+                延续 <span className="text-accent font-medium">{territoryPopup.endYear - territoryPopup.startYear}</span> 年
               </p>
             </div>
           </Popup>
@@ -708,21 +814,21 @@ function LayerControl() {
   ];
 
   return (
-    <div className="bg-surface/90 backdrop-blur rounded-lg p-2 border border-border text-[9px]">
-      <p className="text-text-tertiary mb-1.5 font-medium">图层</p>
+    <div className="bg-surface/95 backdrop-blur-md rounded-xl p-2.5 border border-border/70 shadow-lg shadow-black/30 text-[10px]">
+      <p className="text-text-tertiary mb-2 font-medium tracking-wide">图层</p>
       {layers.map((layer) => {
         const isActive = activeLayers.includes(layer.id);
         return (
           <button
             key={layer.id}
             onClick={() => isActive ? removeActiveLayer(layer.id) : addActiveLayer(layer.id)}
-            className={`flex items-center gap-1.5 w-full px-1.5 py-1 rounded transition-colors ${
-              isActive ? "bg-accent/15 text-accent" : "text-text-tertiary hover:text-text-secondary"
+            className={`flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md transition-all duration-200 ${
+              isActive ? "bg-accent/15 text-accent shadow-sm" : "text-text-tertiary hover:text-text-secondary hover:bg-surface-elevated/50"
             }`}
           >
-            <span className="text-[10px]">{layer.icon}</span>
+            <span className="text-[11px]">{layer.icon}</span>
             <span>{layer.label}</span>
-            <span className={`ml-auto w-2 h-2 rounded-full ${isActive ? "bg-accent" : "bg-border"}`} />
+            <span className={`ml-auto w-2 h-2 rounded-full transition-all duration-200 ${isActive ? "bg-accent shadow-sm shadow-accent/50" : "bg-border"}`} />
           </button>
         );
       })}
@@ -742,12 +848,12 @@ function MapLegend({ events }: { events: HistoricalEvent[] }) {
   if (dynastySet.size === 0) return null;
 
   return (
-    <div className="bg-surface/90 backdrop-blur rounded-lg p-2 border border-border text-[9px]">
-      <p className="text-text-tertiary mb-1 font-medium">朝代图例</p>
-      <div className="flex flex-wrap gap-x-3 gap-y-0.5 max-w-[200px]">
+    <div className="bg-surface/95 backdrop-blur-md rounded-xl p-2.5 border border-border/70 shadow-lg shadow-black/30 text-[10px]">
+      <p className="text-text-tertiary mb-1.5 font-medium tracking-wide">朝代图例</p>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 max-w-[220px]">
         {Array.from(dynastySet.entries()).map(([name, color]) => (
-          <div key={name} className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+          <div key={name} className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}80` }} />
             <span className="text-text-secondary">{name}</span>
           </div>
         ))}
@@ -761,15 +867,15 @@ function BasemapSwitcher() {
   const { basemapType, setBasemapType } = useAppStore();
 
   return (
-    <div className="flex gap-1 bg-surface/90 backdrop-blur rounded-lg p-1 border border-border">
+    <div className="flex gap-1 bg-surface/95 backdrop-blur-md rounded-xl p-1 border border-border/70 shadow-lg shadow-black/30">
       {(["modern", "ccts", "ancient_overlay"] as const).map((type) => (
         <button
           key={type}
           onClick={() => setBasemapType(type)}
-          className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+          className={`px-2.5 py-1.5 rounded-md text-[10px] font-medium transition-all duration-200 ${
             basemapType === type
-              ? "bg-accent text-white"
-              : "text-text-secondary hover:text-text-primary"
+              ? "bg-accent text-white shadow-sm shadow-accent/40"
+              : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated/50"
           }`}
         >
           {type === "modern" ? "现代" : type === "ccts" ? "古地图" : "叠加"}
