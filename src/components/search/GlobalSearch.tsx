@@ -22,15 +22,11 @@ export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult>({ events: [], persons: [], places: [] });
   const [isLoading, setIsLoading] = useState(false);
-  const [isMac, setIsMac] = useState(false);
+  const [isMac] = useState(() =>
+    typeof window !== "undefined" && /mac|darwin|iphone|ipad/i.test(navigator.userAgent)
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // 检测平台用于显示对应快捷键符号
-  useEffect(() => {
-    const mac = /mac|darwin|iphone|ipad/i.test(navigator.userAgent);
-    setIsMac(mac);
-  }, []);
 
   const shortcutLabel = isMac ? "⌘K" : "Ctrl+K";
 

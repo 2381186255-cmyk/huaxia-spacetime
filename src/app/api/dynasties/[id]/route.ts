@@ -1,8 +1,11 @@
 // GET /api/dynasties/[id] — 朝代详情/事件/疆域
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isMockMode, getDynastyById, getEventsByYearRange, MOCK_DYNASTIES } from '@/services/mock-data';
-import { sanitizeId, sanitizeYear, sanitizeErrorMessage } from '@/lib/security';
+import { isMockMode, getDynastyById, getEventsByYearRange } from '@/services/mock-data';
+import { sanitizeId, sanitizeErrorMessage } from '@/lib/security';
+import type { query as QueryFn } from '@/services/db';
+import type { cacheOrFetch as CacheOrFetchFn } from '@/services/redis';
+import type { CACHE_TTL as CacheTtlType, PAGINATION as PaginationType } from '@/lib/constants';
 
 export async function GET(
   request: NextRequest,
@@ -90,7 +93,8 @@ export async function GET(
 
 async function handleEventsDb(
   dynastyId: number, request: NextRequest,
-  query: any, cacheOrFetch: any, CACHE_TTL: any, PAGINATION: any
+  query: typeof QueryFn, cacheOrFetch: typeof CacheOrFetchFn,
+  CACHE_TTL: typeof CacheTtlType, PAGINATION: typeof PaginationType
 ) {
   const { searchParams } = request.nextUrl;
   const page = parseInt(searchParams.get('page') || String(PAGINATION.DEFAULT_PAGE));
@@ -141,7 +145,8 @@ async function handleEventsDb(
 
 async function handleRegionsDb(
   dynastyId: number, request: NextRequest,
-  query: any, cacheOrFetch: any, CACHE_TTL: any
+  query: typeof QueryFn, cacheOrFetch: typeof CacheOrFetchFn,
+  CACHE_TTL: typeof CacheTtlType
 ) {
   const { searchParams } = request.nextUrl;
   const year = searchParams.get('year') ? parseFloat(searchParams.get('year')!) : undefined;

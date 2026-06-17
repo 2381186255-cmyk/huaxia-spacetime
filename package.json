@@ -10,7 +10,7 @@
     "build": "next build",
     "build:lowmem": "node --max-old-space-size=1536 node_modules/next/dist/bin/next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

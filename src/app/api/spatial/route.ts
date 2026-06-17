@@ -3,6 +3,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isMockMode } from '@/services/mock-data';
 import { sanitizeErrorMessage } from '@/lib/security';
+import type { createBuffer as CreateBufferFn } from '@/services/spatial/buffer';
+import type { findShortestRoute as FindShortestRouteFn } from '@/services/spatial/routing';
+import type { spatialAggregate as SpatialAggregateFn, calculateDistance as CalculateDistanceFn } from '@/services/spatial/aggregate';
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleBuffer(body: { geom: Record<string, unknown>; radius_km: number }, createBuffer: any) {
+async function handleBuffer(body: { geom: Record<string, unknown>; radius_km: number }, createBuffer: typeof CreateBufferFn) {
   if (!body.geom || !body.radius_km) {
     return NextResponse.json({ error: 'geom and radius_km are required' }, { status: 400 });
   }
@@ -60,7 +63,7 @@ async function handleBuffer(body: { geom: Record<string, unknown>; radius_km: nu
   return NextResponse.json(result);
 }
 
-async function handleRoute(body: { start: { type: string; coordinates: [number, number] }; end: { type: string; coordinates: [number, number] }; dynasty_id?: number; route_type?: string }, findShortestRoute: any) {
+async function handleRoute(body: { start: { type: string; coordinates: [number, number] }; end: { type: string; coordinates: [number, number] }; dynasty_id?: number; route_type?: string }, findShortestRoute: typeof FindShortestRouteFn) {
   if (!body.start || !body.end) {
     return NextResponse.json({ error: 'start and end points are required' }, { status: 400 });
   }
@@ -68,7 +71,7 @@ async function handleRoute(body: { start: { type: string; coordinates: [number, 
   return NextResponse.json(result);
 }
 
-async function handleAggregate(body: { bbox: [number, number, number, number]; year?: number; dynasty_id?: number; group_by?: 'event_type' | 'dynasty_id' | 'place_type' }, spatialAggregate: any) {
+async function handleAggregate(body: { bbox: [number, number, number, number]; year?: number; dynasty_id?: number; group_by?: 'event_type' | 'dynasty_id' | 'place_type' }, spatialAggregate: typeof SpatialAggregateFn) {
   if (!body.bbox || body.bbox.length !== 4) {
     return NextResponse.json({ error: 'bbox [xmin, ymin, xmax, ymax] is required' }, { status: 400 });
   }
@@ -76,7 +79,7 @@ async function handleAggregate(body: { bbox: [number, number, number, number]; y
   return NextResponse.json(result);
 }
 
-async function handleDistance(body: { start: [number, number]; end: [number, number] }, calculateDistance: any) {
+async function handleDistance(body: { start: [number, number]; end: [number, number] }, calculateDistance: typeof CalculateDistanceFn) {
   if (!body.start || !body.end) {
     return NextResponse.json({ error: 'start and end coordinates are required' }, { status: 400 });
   }

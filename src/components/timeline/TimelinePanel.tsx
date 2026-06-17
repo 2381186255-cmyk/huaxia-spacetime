@@ -63,15 +63,39 @@ export function TimelinePanel({ markers = [] }: TimelinePanelProps) {
 
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const rafRef = useRef<number | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(TIMELINE.WIDTH);
 
-  // Era name state for the current year
-  const [eraInfo, setEraInfo] = useState<{ eraName: string; dynastyName: string; color: string } | null>(null);
+  // 测量容器宽度，避免在 render 中读取 ref
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const el = containerRef.current;
+    const updateWidth = () => setContainerWidth(el.clientWidth || TIMELINE.WIDTH);
+    updateWidth();
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // 根据当前年份计算年号信息
+  const eraInfo = useMemo(() => {
+    if (currentYear === null) return null;
+    const era = lookupEraName(currentYear);
+    const dynasty = findDynastyForYear(currentYear);
+    if (era) {
+      return { eraName: era.eraName, dynastyName: era.dynastyName, color: dynasty?.color ?? "#888" };
+    }
+    if (dynasty) {
+      return { eraName: dynasty.name, dynastyName: dynasty.name, color: dynasty.color };
+    }
+    return null;
+  }, [currentYear]);
 
   // 根据模式选择Scale
   const scale = useMemo(() => {
-    const width = containerRef.current?.clientWidth || TIMELINE.WIDTH;
+    const width = containerWidth;
 
     if (currentMode === "general" || currentMode === "today") {
       return d3
@@ -100,24 +124,7 @@ export function TimelinePanel({ markers = [] }: TimelinePanelProps) {
     }
 
     return d3.scaleLinear().domain([MIN_YEAR, MAX_YEAR]).range([40, width - 40]);
-  }, [currentMode, timeRange]);
-
-  // Update era name when currentYear changes
-  useEffect(() => {
-    if (currentYear === null) {
-      setEraInfo(null);
-      return;
-    }
-    const era = lookupEraName(currentYear);
-    const dynasty = findDynastyForYear(currentYear);
-    if (era) {
-      setEraInfo({ eraName: era.eraName, dynastyName: era.dynastyName, color: dynasty?.color ?? "#888" });
-    } else if (dynasty) {
-      setEraInfo({ eraName: dynasty.name, dynastyName: dynasty.name, color: dynasty.color });
-    } else {
-      setEraInfo(null);
-    }
-  }, [currentYear]);
+  }, [currentMode, timeRange, containerWidth]);
 
   // 播放逻辑
   useEffect(() => {
@@ -337,7 +344,7 @@ export function TimelinePanel({ markers = [] }: TimelinePanelProps) {
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
       e.preventDefault();
-      isDraggingRef.current = true;
+      setIsDragging(true);
       (e.target as Element).setPointerCapture?.(e.pointerId);
       const year = getYearFromPointer(e.clientX);
       if (year !== null) {
@@ -349,7 +356,7 @@ export function TimelinePanel({ markers = [] }: TimelinePanelProps) {
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
-      if (!isDraggingRef.current) return;
+      if (!isDragging) return;
       e.preventDefault();
 
       // Throttle via requestAnimationFrame
@@ -362,11 +369,11 @@ export function TimelinePanel({ markers = [] }: TimelinePanelProps) {
         rafRef.current = null;
       });
     },
-    [getYearFromPointer, setCurrentYear]
+    [getYearFromPointer, setCurrentYear, isDragging]
   );
 
   const handlePointerUp = useCallback(() => {
-    isDraggingRef.current = false;
+    setIsDragging(false);
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
@@ -376,13 +383,13 @@ export function TimelinePanel({ markers = [] }: TimelinePanelProps) {
   return (
     <div
       ref={containerRef}
-      className="bg-surface border-t border-border shrink-0 relative"
+      className="timeline-panel bg-surface border-t border-border shrink-0 relative"
       style={{ height: 140 }}
     >
       <svg
         ref={svgRef}
         className="w-full h-full"
-        style={{ cursor: isDraggingRef.current ? "grabbing" : "pointer" }}
+        style={{ cursor: isDragging ? "grabbing" : "pointer" }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
