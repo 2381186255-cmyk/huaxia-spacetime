@@ -20,6 +20,8 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
+      data-theme="dark"
+      suppressHydrationWarning
       className={`${geistSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-neutral-950 text-neutral-100 overflow-hidden">

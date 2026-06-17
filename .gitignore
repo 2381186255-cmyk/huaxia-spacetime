@@ -59,6 +59,7 @@ playwright-report/
 verify-screenshots*/
 verify-screenshots-final/
 verify-*.py
+audit-shots/
 
 # Security reports should not be committed to public repo
 security-report/
