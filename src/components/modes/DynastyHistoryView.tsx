@@ -125,7 +125,7 @@ export function DynastyHistoryView() {
     <div className="flex-1 flex min-h-0 relative">
       <MapPanel events={visibleEvents} onMarkerClick={handleDeepExplore} />
 
-      <div className="flex flex-col w-80 shrink-0">
+      <div className="flex flex-col w-72 shrink-0">
         {/* 朝代头部栏 */}
         <div className="px-3 py-2 border-b border-border">
           <div className="flex items-center gap-2">

@@ -63,7 +63,7 @@ export function GeneralHistoryView() {
         <>
           <MapPanel events={visibleEvents} onMarkerClick={handleDeepExplore} />
 
-          <div className="flex flex-col w-80 shrink-0">
+          <div className="flex flex-col w-72 shrink-0">
             <div className="px-3 py-2 border-b border-border">
               <h2 className="text-xs font-medium text-text-primary">通史概览</h2>
               <p className="text-[10px] text-text-tertiary mt-0.5">

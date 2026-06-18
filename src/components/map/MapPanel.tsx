@@ -122,8 +122,9 @@ interface MapPanelProps {
 // ===== 疆域地块 GeoJSON =====
 const territoryGeoJSON: FeatureCollection<MultiPolygon> = {
   type: "FeatureCollection",
-  features: MOCK_TERRITORIES.map((t) => ({
+  features: MOCK_TERRITORIES.map((t, index) => ({
     type: "Feature" as const,
+    id: index,
     geometry: t.geom,
     properties: {
       dynastyId: t.dynasty_id,
@@ -167,7 +168,7 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
 
   // 时间过滤：基于 currentYear 过滤疆域地块
   const territoryFilter: FilterSpecification = useMemo(() => {
-    if (currentYear === null) return ["all"];
+    if (currentYear === null) return ["boolean", true] as FilterSpecification;
     return [
       "all",
       ["<=", ["get", "startYear"], currentYear],
@@ -255,12 +256,39 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
     }
   }, [queryTerritoryFeatures]);
 
-  // 地块 hover
+  // 地块 hover（使用 feature-state 实现高亮）
+  const hoveredFeatureRef = useRef<{ source: string; id: string | number } | null>(null);
   const handleTerritoryHover = useCallback((e: maplibregl.MapMouseEvent) => {
+    const map = e.target;
     const features = queryTerritoryFeatures(e);
+
+    // 清除上一个高亮
+    if (hoveredFeatureRef.current) {
+      try {
+        map.setFeatureState(
+          { source: hoveredFeatureRef.current.source, id: hoveredFeatureRef.current.id },
+          { hover: false }
+        );
+      } catch {
+        // ignore
+      }
+      hoveredFeatureRef.current = null;
+    }
+
     if (features.length > 0) {
-      setHoveredTerritory(features[0].id as string);
+      const feature = features[0];
+      const featureId = feature.id as string | number;
+      setHoveredTerritory(String(featureId));
       e.target.getCanvas().style.cursor = "pointer";
+      try {
+        map.setFeatureState(
+          { source: "territories", id: featureId },
+          { hover: true }
+        );
+        hoveredFeatureRef.current = { source: "territories", id: featureId };
+      } catch {
+        // ignore
+      }
     } else {
       setHoveredTerritory(null);
       e.target.getCanvas().style.cursor = "";
@@ -496,117 +524,122 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
         </Source>
 
         {/* ===== 疆域地块图层 ===== */}
-        {showTerritories && (
-          <Source id="territories" type="geojson" data={territoryGeoJSON}>
-            {/* 地块外光晕层 - 大范围柔和发光 */}
-            <Layer
-              id="territory-glow"
-              type="fill"
-              filter={territoryFilter}
-              paint={{
-                "fill-color": ["get", "color"],
-                "fill-opacity": [
-                  "interpolate", ["linear"], ["zoom"],
-                  3, 0.04,
-                  6, 0.08,
-                  10, 0.12,
-                ],
-              }}
-            />
-            {/* 地块填充 - 明显提高可见度 */}
-            <Layer
-              id="territory-fill"
-              type="fill"
-              filter={territoryFilter}
-              paint={{
-                "fill-color": ["get", "color"],
-                "fill-opacity": [
-                  "interpolate", ["linear"], ["zoom"],
-                  3, ["case", ["boolean", ["feature-state", "hover"], false], 0.65, 0.42],
-                  6, ["case", ["boolean", ["feature-state", "hover"], false], 0.58, 0.36],
-                  10, ["case", ["boolean", ["feature-state", "hover"], false], 0.50, 0.30],
-                ],
-              }}
-            />
-            {/* 地块内层 - 增强层次感 */}
-            <Layer
-              id="territory-fill-inner"
-              type="fill"
-              filter={territoryFilter}
-              paint={{
-                "fill-color": "#000000",
-                "fill-opacity": [
-                  "case",
-                  ["boolean", ["feature-state", "hover"], false],
-                  0.08,
-                  0.04,
-                ],
-              }}
-            />
-            {/* 地块主边界 - 更粗的实线 */}
-            <Layer
-              id="territory-border"
-              type="line"
-              filter={territoryFilter}
-              paint={{
-                "line-color": ["get", "color"],
-                "line-width": [
-                  "interpolate", ["linear"], ["zoom"],
-                  3, 2.5,
-                  6, 4,
-                  10, 5,
-                ],
-                "line-opacity": 1,
-                "line-blur": 0,
-              }}
-            />
-            {/* 地块高光边界 - 更亮的轮廓 */}
-            <Layer
-              id="territory-border-highlight"
-              type="line"
-              filter={territoryFilter}
-              paint={{
-                "line-color": "#ffffff",
-                "line-width": [
-                  "case",
-                  ["boolean", ["feature-state", "hover"], false],
-                  2,
-                  1,
-                ],
-                "line-opacity": [
-                  "case",
-                  ["boolean", ["feature-state", "hover"], false],
-                  0.85,
-                  0.45,
-                ],
-              }}
-            />
-            {/* 地块名称标注 */}
-            <Layer
-              id="territory-labels"
-              type="symbol"
-              filter={territoryFilter}
-              layout={{
-                "text-field": ["get", "dynastyName"],
-                "text-size": [
-                  "interpolate", ["linear"], ["zoom"],
-                  3, 11,
-                  6, 13,
-                  10, 15,
-                ],
-                "text-anchor": "center",
-                "text-optional": true,
-                "text-letter-spacing": 0.1,
-              }}
-              paint={{
-                "text-color": "#ffffff",
-                "text-halo-color": ["get", "color"],
-                "text-halo-width": 2.5,
-                "text-opacity": 0.95,
-              }}
-            />
-          </Source>
-        )}
+        <Source id="territories" type="geojson" data={territoryGeoJSON}>
+          {/* 地块外光晕层 - 大范围柔和发光 */}
+          <Layer
+            id="territory-glow"
+            type="fill"
+            beforeId="chinese-place-labels"
+            filter={territoryFilter}
+            layout={{ "visibility": showTerritories ? "visible" : "none" }}
+            paint={{
+              "fill-color": ["get", "color"],
+              "fill-opacity": 0.18,
+            }}
+          />
+          {/* 地块填充 - 明显提高可见度 */}
+          <Layer
+            id="territory-fill"
+            type="fill"
+            beforeId="chinese-place-labels"
+            filter={territoryFilter}
+            layout={{ "visibility": showTerritories ? "visible" : "none" }}
+            paint={{
+              "fill-color": ["get", "color"],
+              "fill-opacity": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                0.55,
+                0.38,
+              ],
+            }}
+          />
+          {/* 地块内层 - 增强层次感 */}
+          <Layer
+            id="territory-fill-inner"
+            type="fill"
+            beforeId="chinese-place-labels"
+            filter={territoryFilter}
+            layout={{ "visibility": showTerritories ? "visible" : "none" }}
+            paint={{
+              "fill-color": "#000000",
+              "fill-opacity": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                0.10,
+                0.05,
+              ],
+            }}
+          />
+          {/* 地块主边界 - 更粗的实线 */}
+          <Layer
+            id="territory-border"
+            type="line"
+            beforeId="chinese-place-labels"
+            filter={territoryFilter}
+            layout={{ "visibility": showTerritories ? "visible" : "none" }}
+            paint={{
+              "line-color": ["get", "color"],
+              "line-width": [
+                "interpolate", ["linear"], ["zoom"],
+                3, 2,
+                6, 3.5,
+                10, 5,
+              ],
+              "line-opacity": 1,
+              "line-blur": 0,
+            }}
+          />
+          {/* 地块高光边界 - 更亮的轮廓 */}
+          <Layer
+            id="territory-border-highlight"
+            type="line"
+            beforeId="chinese-place-labels"
+            filter={territoryFilter}
+            layout={{ "visibility": showTerritories ? "visible" : "none" }}
+            paint={{
+              "line-color": "#ffffff",
+              "line-width": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                2,
+                1,
+              ],
+              "line-opacity": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                0.85,
+                0.45,
+              ],
+            }}
+          />
+          {/* 地块名称标注 */}
+          <Layer
+            id="territory-labels"
+            type="symbol"
+            beforeId="chinese-place-labels"
+            filter={territoryFilter}
+            layout={{
+              "visibility": showTerritories ? "visible" : "none",
+              "text-field": ["get", "dynastyName"],
+              "text-size": [
+                "interpolate", ["linear"], ["zoom"],
+                3, 11,
+                6, 13,
+                10, 15,
+              ],
+              "text-anchor": "center",
+              "text-optional": true,
+              "text-letter-spacing": 0.1,
+            }}
+            paint={{
+              "text-color": "#ffffff",
+              "text-halo-color": ["get", "color"],
+              "text-halo-width": 2.5,
+              "text-opacity": 0.95,
+            }}
+          />
+        </Source>
 
         {/* ===== 事件连线图层 ===== */}
         {routesGeoJSON.features.length > 0 && (
@@ -796,13 +829,12 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
         )}
       </Map>
 
-      {/* 图层控制 */}
-      <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
-        <LayerControl />
-        <MapLegend events={events} />
+      {/* 左上角：图层 + 图例合并面板 */}
+      <div className="absolute top-3 left-3 z-10">
+        <MapOverlayPanel events={events} />
       </div>
 
-      {/* 底图切换 */}
+      {/* 左下角：底图切换 */}
       <div className="absolute bottom-4 left-4 z-10">
         <BasemapSwitcher />
       </div>
@@ -810,40 +842,15 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
   );
 }
 
-// ===== 图层控制 =====
-function LayerControl() {
+// ===== 图层 + 图例合并面板 =====
+function MapOverlayPanel({ events }: { events: HistoricalEvent[] }) {
   const { activeLayers, addActiveLayer, removeActiveLayer } = useAppStore();
 
   const layers = [
-    { id: "territories", label: "疆域地块", icon: "🗺️" },
-    { id: "routes", label: "事件路线", icon: "↗️" },
+    { id: "territories", label: "疆域" },
+    { id: "routes", label: "路线" },
   ];
 
-  return (
-    <div className="bg-surface/80 backdrop-blur-xl rounded-xl p-2.5 border border-border/50 shadow-lg shadow-black/40 text-[10px]">
-      <p className="text-text-tertiary mb-2 font-medium tracking-wide">图层</p>
-      {layers.map((layer) => {
-        const isActive = activeLayers.includes(layer.id);
-        return (
-          <button
-            key={layer.id}
-            onClick={() => isActive ? removeActiveLayer(layer.id) : addActiveLayer(layer.id)}
-            className={`flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md transition-all duration-200 ${
-              isActive ? "bg-accent/15 text-accent shadow-sm" : "text-text-tertiary hover:text-text-secondary hover:bg-surface-elevated/50"
-            }`}
-          >
-            <span className="text-[11px]">{layer.icon}</span>
-            <span>{layer.label}</span>
-            <span className={`ml-auto w-2 h-2 rounded-full transition-all duration-200 ${isActive ? "bg-accent shadow-sm shadow-accent/50" : "bg-border"}`} />
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ===== 图例 =====
-function MapLegend({ events }: { events: HistoricalEvent[] }) {
   const dynastySet = new globalThis.Map<string, string>();
   events.forEach((e) => {
     if (e.dynasty && !dynastySet.has(e.dynasty.name)) {
@@ -851,19 +858,38 @@ function MapLegend({ events }: { events: HistoricalEvent[] }) {
     }
   });
 
-  if (dynastySet.size === 0) return null;
-
   return (
-    <div className="bg-surface/80 backdrop-blur-xl rounded-xl p-2.5 border border-border/50 shadow-lg shadow-black/40 text-[10px]">
-      <p className="text-text-tertiary mb-1.5 font-medium tracking-wide">朝代图例</p>
-      <div className="flex flex-wrap gap-x-3 gap-y-1 max-w-[220px]">
-        {Array.from(dynastySet.entries()).map(([name, color]) => (
-          <div key={name} className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}80` }} />
-            <span className="text-text-secondary">{name}</span>
-          </div>
-        ))}
+    <div className="bg-surface/70 backdrop-blur-xl rounded-lg p-2 border border-border/40 shadow-lg shadow-black/40 text-[10px]">
+      {/* 图层开关 - 横向排列 */}
+      <div className="flex items-center gap-1.5 mb-1.5">
+        {layers.map((layer) => {
+          const isActive = activeLayers.includes(layer.id);
+          return (
+            <button
+              key={layer.id}
+              onClick={() => isActive ? removeActiveLayer(layer.id) : addActiveLayer(layer.id)}
+              className={`flex items-center gap-1 px-2 py-1 rounded transition-all duration-200 ${
+                isActive ? "bg-accent/20 text-accent" : "text-text-tertiary hover:text-text-secondary"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-accent" : "bg-border"}`} />
+              {layer.label}
+            </button>
+          );
+        })}
       </div>
+
+      {/* 朝代图例 - 紧凑横排 */}
+      {dynastySet.size > 0 && (
+        <div className="flex flex-wrap gap-x-2 gap-y-0.5 max-w-[200px] pt-1.5 border-t border-border/30">
+          {Array.from(dynastySet.entries()).map(([name, color]) => (
+            <div key={name} className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+              <span className="text-text-tertiary">{name}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -873,18 +899,18 @@ function BasemapSwitcher() {
   const { basemapType, setBasemapType } = useAppStore();
 
   return (
-    <div className="flex gap-1 bg-surface/80 backdrop-blur-xl rounded-xl p-1 border border-border/50 shadow-lg shadow-black/40">
+    <div className="flex gap-0.5 bg-surface/70 backdrop-blur-xl rounded-lg p-0.5 border border-border/40 shadow-lg shadow-black/40">
       {(["modern", "ccts", "ancient_overlay"] as const).map((type) => (
         <button
           key={type}
           onClick={() => setBasemapType(type)}
-          className={`px-2.5 py-1.5 rounded-md text-[10px] font-medium transition-all duration-200 ${
+          className={`px-2 py-1 rounded text-[10px] font-medium transition-all duration-200 ${
             basemapType === type
-              ? "bg-accent text-white shadow-sm shadow-accent/40"
-              : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated/50"
+              ? "bg-accent/80 text-white"
+              : "text-text-tertiary hover:text-text-primary"
           }`}
         >
-          {type === "modern" ? "现代" : type === "ccts" ? "古地图" : "叠加"}
+          {type === "modern" ? "现代" : type === "ccts" ? "古图" : "叠加"}
         </button>
       ))}
     </div>

@@ -1641,6 +1641,7 @@ interface MockTerritory {
 }
 
 // 简化的中国各朝代核心疆域多边形
+// GeoJSON MultiPolygon coordinates 格式: [ [ [ [x,y], [x,y], ... ] ] ]
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mp = (...polygons: any): { type: "MultiPolygon"; coordinates: any } => ({
   type: "MultiPolygon" as const,
@@ -1648,9 +1649,9 @@ const mp = (...polygons: any): { type: "MultiPolygon"; coordinates: any } => ({
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ring = (...points: any): any => [points];
+const ring = (...points: any): any => points;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const polygon = (...rings: any): any => [rings];
+const polygon = (...rings: any): any => rings;
 
 export const MOCK_TERRITORIES: MockTerritory[] = [
   // 夏

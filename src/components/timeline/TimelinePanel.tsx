@@ -383,10 +383,10 @@ export function TimelinePanel({ markers = [] }: TimelinePanelProps) {
   return (
     <div
       ref={containerRef}
-      className="timeline-panel bg-surface/75 backdrop-blur-xl border-t border-border/50 shrink-0 relative"
+      className="timeline-panel bg-surface/60 backdrop-blur-2xl border-t border-border/30 shrink-0 relative"
       style={{
-        height: 140,
-        boxShadow: "0 -8px 32px rgba(0, 0, 0, 0.45), 0 -1px 0 rgba(255, 255, 255, 0.04) inset",
+        height: 120,
+        boxShadow: "0 -12px 40px rgba(0, 0, 0, 0.5)",
       }}
     >
       <svg

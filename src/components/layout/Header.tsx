@@ -16,7 +16,7 @@ export function Header() {
   const { currentMode, setMode } = useAppStore();
 
   return (
-    <header className="h-12 flex items-center justify-between px-4 bg-surface border-b border-border shrink-0 z-50">
+    <header className="h-10 flex items-center justify-between px-3 bg-surface/80 backdrop-blur-xl border-b border-border/30 shrink-0 z-50">
       <div className="flex items-center gap-3">
         <Layers className="w-5 h-5 text-gold" />
         <h1

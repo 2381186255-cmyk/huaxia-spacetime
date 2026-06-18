@@ -6,7 +6,7 @@ import { useAppStore } from "@/stores/appStore";
 import { formatYear } from "@/lib/date-utils";
 import { EVENT_TYPE_LABELS, PERSON_TYPE_LABELS } from "@/lib/constants";
 import {
-  Filter, ExternalLink, ChevronRight, BookOpen, User, FileText,
+  ExternalLink, ChevronRight, BookOpen, User, FileText,
   Crown, Shield, MapPin
 } from "lucide-react";
 import type { HistoricalEvent, Person } from "@/lib/types";
@@ -59,12 +59,12 @@ export function KnowledgePanel({
 
   return (
     <div
-      className="w-80 bg-surface/75 backdrop-blur-xl border-l border-border/50 flex flex-col shrink-0"
-      style={{ boxShadow: "-8px 0 32px rgba(0, 0, 0, 0.45), 1px 0 0 rgba(255, 255, 255, 0.04) inset" }}
+      className="w-72 bg-surface/60 backdrop-blur-2xl border-l border-border/30 flex flex-col shrink-0"
+      style={{ boxShadow: "-12px 0 40px rgba(0, 0, 0, 0.5)" }}
     >
-      {/* 面板头部 */}
-      <div className="h-10 flex items-center justify-between px-3 border-b border-border">
-        <div className="flex items-center gap-1">
+      {/* 面板头部 - 紧凑标签栏 */}
+      <div className="h-9 flex items-center px-2 border-b border-border/30">
+        <div className="flex items-center gap-0.5">
           {[
             { id: "events" as const, icon: BookOpen, label: "事件" },
             { id: "person" as const, icon: User, label: "人物" },
@@ -76,7 +76,7 @@ export function KnowledgePanel({
               className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors ${
                 panelTab === tab.id
                   ? "bg-accent/15 text-accent"
-                  : "text-text-secondary hover:text-text-primary"
+                  : "text-text-tertiary hover:text-text-secondary"
               }`}
             >
               <tab.icon className="w-3 h-3" />
@@ -84,9 +84,6 @@ export function KnowledgePanel({
             </button>
           ))}
         </div>
-        <button className="p-1 rounded hover:bg-surface-elevated text-text-tertiary">
-          <Filter className="w-3.5 h-3.5" />
-        </button>
       </div>
 
       {/* 筛选标签 */}
