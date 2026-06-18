@@ -12,9 +12,8 @@ import { MOCK_TERRITORIES, MOCK_PLACES } from "@/services/mock-data";
 import type { FeatureCollection, Point, LineString, MultiPolygon, Position } from "geojson";
 import type { HistoricalEvent } from "@/lib/types";
 
-// ===== 中文暗色底图样式 =====
-// 使用 CARTO 暗色无标注底图 + 中文地名标注图层
-const DARK_MAP_STYLE: StyleSpecification = {
+// ===== 现代深色底图样式 =====
+const MODERN_MAP_STYLE: StyleSpecification = {
   version: 8,
   sources: {
     'carto-dark': {
@@ -32,6 +31,21 @@ const DARK_MAP_STYLE: StyleSpecification = {
     source: 'carto-dark',
     minzoom: 0,
     maxzoom: 19
+  }],
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+};
+
+// ===== 纯黑结构底图样式 =====
+// 以纯黑为基底，让古地图瓦片成为唯一视觉结构，增强光亮对比
+const BLACK_MAP_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {},
+  layers: [{
+    id: 'black-background',
+    type: 'background',
+    paint: {
+      'background-color': '#000000',
+    },
   }],
   glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
 };
@@ -91,6 +105,55 @@ function getCctsTileUrl(layer: string): string {
     "https://gis.sinica.edu.tw/ccts/wmts";
   return `${baseUrl}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=_null&FORMAT=image/png&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILECOL={x}&TILEROW={y}`;
 }
+
+// ===== 古代水系结构 GeoJSON（纯黑古图模式下发光显示） =====
+const ANCIENT_STRUCTURE_GEOJSON: FeatureCollection<LineString> = {
+  type: "FeatureCollection",
+  features: [
+    {
+      type: "Feature" as const,
+      geometry: {
+        type: "LineString" as const,
+        coordinates: [
+          [96, 35], [98, 36], [100, 36.5], [102, 36], [104, 35.5], [106, 35], [108, 34.5],
+          [110, 34], [112, 34.5], [114, 35], [116, 35.5], [118, 36], [120, 37], [122, 38],
+        ],
+      },
+      properties: { type: "water", name: "黄河" },
+    },
+    {
+      type: "Feature" as const,
+      geometry: {
+        type: "LineString" as const,
+        coordinates: [
+          [90, 33], [95, 32], [100, 31], [105, 30.5], [110, 30], [115, 30.5], [120, 31.5],
+          [122, 32],
+        ],
+      },
+      properties: { type: "water", name: "长江" },
+    },
+    {
+      type: "Feature" as const,
+      geometry: {
+        type: "LineString" as const,
+        coordinates: [
+          [108, 23], [110, 24], [112, 25], [114, 26], [116, 27],
+        ],
+      },
+      properties: { type: "water", name: "珠江" },
+    },
+    {
+      type: "Feature" as const,
+      geometry: {
+        type: "LineString" as const,
+        coordinates: [
+          [110, 32], [112, 33], [114, 34], [116, 35], [118, 36],
+        ],
+      },
+      properties: { type: "route", name: "南北干线" },
+    },
+  ],
+};
 
 // ===== 中文地名 GeoJSON（基于 MOCK_PLACES） =====
 const chinesePlacesGeoJSON: FeatureCollection<Point> = {
@@ -374,16 +437,6 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
       }
     };
 
-    // 控制暗色底图可见性
-    const cartoLayer = map.getLayer('carto-dark-layer');
-    if (cartoLayer) {
-      map.setLayoutProperty(
-        'carto-dark-layer',
-        'visibility',
-        basemapType === 'ccts' ? 'none' : 'visible'
-      );
-    }
-
     if (!showCcts) {
       removeCctsLayers();
       return;
@@ -405,31 +458,70 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
       });
 
       if (basemapType === 'ccts') {
-        // 古地图底图模式：半透明复古色块，现代底图轮廓透出形成对比
-        map.addLayer({
-          id: 'ccts-basemap-layer',
-          type: 'raster',
-          source: 'ccts-tiles',
-          paint: {
-            'raster-opacity': 0.55,
-            'raster-saturation': -0.35,
-            'raster-contrast': 0.15,
-            'raster-hue-rotate': 15,
+        // 纯黑古图模式：不依赖外部 CCTS 瓦片，使用自定义发光结构图层
+        // 添加发光水系/路网结构
+        if (!map.getSource('ancient-structure')) {
+          map.addSource('ancient-structure', {
+            type: 'geojson',
+            data: ANCIENT_STRUCTURE_GEOJSON,
+          });
+        }
+        const structureLayers: { id: string; paint: maplibregl.LineLayerSpecification['paint'] }[] = [
+          {
+            id: 'ancient-structure-outer-glow',
+            paint: {
+              'line-color': '#ffffff',
+              'line-width': ['interpolate', ['linear'], ['zoom'], 3, 5, 6, 10, 10, 16],
+              'line-opacity': 0.08,
+              'line-blur': 8,
+            },
           },
-        }, 'chinese-place-labels'); // 插入到地名标注之前
+          {
+            id: 'ancient-structure-glow',
+            paint: {
+              'line-color': '#4fc3f7',
+              'line-width': ['interpolate', ['linear'], ['zoom'], 3, 3, 6, 6, 10, 9],
+              'line-opacity': 0.35,
+              'line-blur': 5,
+            },
+          },
+          {
+            id: 'ancient-structure-core',
+            paint: {
+              'line-color': '#e1f5fe',
+              'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1.2, 6, 2.2, 10, 3.5],
+              'line-opacity': 0.9,
+            },
+          },
+        ];
+        structureLayers.forEach((layer) => {
+          if (!map.getLayer(layer.id)) {
+            map.addLayer({
+              id: layer.id,
+              type: 'line',
+              source: 'ancient-structure',
+              filter: ['==', ['get', 'type'], 'water'],
+              paint: layer.paint,
+            });
+          }
+        });
       } else {
-        // 叠加模式：半透明复古色块叠加在暗色底图之上
-        map.addLayer({
-          id: 'ccts-overlay-layer',
-          type: 'raster',
-          source: 'ccts-tiles',
-          paint: {
-            'raster-opacity': 0.5,
-            'raster-saturation': -0.3,
-            'raster-contrast': 0.1,
-            'raster-hue-rotate': 12,
-          },
-        }, 'territory-glow'); // 插入到疆域光晕层之前，使疆域显示在最上层
+        // 叠加模式：古地图瓦片叠加在暗色底图之上
+        try {
+          map.addLayer({
+            id: 'ccts-overlay-layer',
+            type: 'raster',
+            source: 'ccts-tiles',
+            paint: {
+              'raster-opacity': 0.55,
+              'raster-saturation': -0.9,
+              'raster-contrast': 0.75,
+              'raster-hue-rotate': 0,
+            },
+          }, 'territory-glow'); // 插入到疆域光晕层之前，使疆域显示在最上层
+        } catch {
+          // 忽略图层已存在或添加失败
+        }
       }
 
       // 瓦片加载错误降级：连续失败时自动切回现代底图
@@ -473,7 +565,7 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
           zoom: mapViewport.zoom,
         }}
         style={{ width: "100%", height: "100%" }}
-        mapStyle={DARK_MAP_STYLE}
+        mapStyle={basemapType === 'ccts' ? BLACK_MAP_STYLE : MODERN_MAP_STYLE}
         onMove={(e) =>
           setMapViewport({
             longitude: e.viewState.longitude,
@@ -509,13 +601,14 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
               "text-letter-spacing": 0.08,
             }}
             paint={{
-              "text-color": "#e0d8c8",
-              "text-halo-color": "#0a0a14",
-              "text-halo-width": 2.5,
+              "text-color": "#ffffff",
+              "text-halo-color": "#000000",
+              "text-halo-width": 3,
+              "text-halo-blur": 1,
               "text-opacity": [
                 "interpolate", ["linear"], ["zoom"],
                 2, 0,
-                4, 0.85,
+                4, 0.9,
                 6, 1,
               ],
             }}
@@ -683,9 +776,9 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
               type="circle"
               paint={{
                 "circle-radius": ["interpolate", ["linear"], ["get", "importance"],
-                  1, 24, 2, 20, 3, 16, 4, 14, 5, 12],
+                  1, 28, 2, 24, 3, 20, 4, 18, 5, 16],
                 "circle-color": ["get", "dynastyColor"],
-                "circle-opacity": ["*", ["get", "timeOpacity"], 0.08],
+                "circle-opacity": ["*", ["get", "timeOpacity"], 0.18],
                 "circle-blur": 1,
               }}
             />
@@ -695,10 +788,10 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
               type="circle"
               paint={{
                 "circle-radius": ["interpolate", ["linear"], ["get", "importance"],
-                  1, 16, 2, 13, 3, 11, 4, 9, 5, 7],
+                  1, 20, 2, 16, 3, 14, 4, 12, 5, 10],
                 "circle-color": ["get", "dynastyColor"],
-                "circle-opacity": ["*", ["get", "timeOpacity"], 0.2],
-                "circle-blur": 0.8,
+                "circle-opacity": ["*", ["get", "timeOpacity"], 0.35],
+                "circle-blur": 0.6,
               }}
             />
             {/* 标记主体 - 带描边 */}
@@ -707,10 +800,10 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
               type="circle"
               paint={{
                 "circle-radius": ["interpolate", ["linear"], ["get", "importance"],
-                  1, 8, 2, 6.5, 3, 5, 4, 4, 5, 3],
+                  1, 10, 2, 8, 3, 6.5, 4, 5.5, 5, 4.5],
                 "circle-color": ["get", "dynastyColor"],
                 "circle-opacity": ["get", "timeOpacity"],
-                "circle-stroke-width": 2,
+                "circle-stroke-width": 2.5,
                 "circle-stroke-color": "#ffffff",
                 "circle-stroke-opacity": ["get", "timeOpacity"],
               }}
@@ -721,9 +814,9 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
               type="circle"
               paint={{
                 "circle-radius": ["interpolate", ["linear"], ["get", "importance"],
-                  1, 3, 2, 2.5, 3, 2, 4, 1.5, 5, 1],
+                  1, 4, 2, 3.5, 3, 3, 4, 2.5, 5, 2],
                 "circle-color": "#ffffff",
-                "circle-opacity": ["*", ["get", "timeOpacity"], 0.9],
+                "circle-opacity": ["*", ["get", "timeOpacity"], 1],
               }}
             />
             <Layer
@@ -742,12 +835,13 @@ export function MapPanel({ events = [], onMarkerClick, selectedEventId }: MapPan
                 "text-optional": true,
                 "text-letter-spacing": 0.05,
               }}
-              paint={{
-                "text-color": "#f5f5f5",
-                "text-halo-color": "#000000",
-                "text-halo-width": 2,
-                "text-opacity": ["get", "timeOpacity"],
-              }}
+            paint={{
+              "text-color": "#ffffff",
+              "text-halo-color": "#000000",
+              "text-halo-width": 3,
+              "text-halo-blur": 1,
+              "text-opacity": ["get", "timeOpacity"],
+            }}
             />
           </Source>
         )}
@@ -910,7 +1004,7 @@ function BasemapSwitcher() {
               : "text-text-tertiary hover:text-text-primary"
           }`}
         >
-          {type === "modern" ? "现代" : type === "ccts" ? "古图" : "叠加"}
+          {type === "modern" ? "现代" : type === "ccts" ? "纯黑古图" : "叠加"}
         </button>
       ))}
     </div>
